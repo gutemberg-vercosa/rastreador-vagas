@@ -90,3 +90,39 @@ def eh_vaga(titulo: str, etiquetas: list[str]) -> bool:
     if re.match(r"(docs|chore|fix|feat|ci|build)(\(.*\))?:|question|duvida|pergunta", t):
         return False
     return not any(normalizar(e) in {"dependencies", "github_actions", "github-actions"} or "bot" in normalizar(e) for e in etiquetas)
+
+
+# Salário: só onde a vaga fala de salário ("Faixa salarial", "Remuneração", etiqueta 💰),
+# para não confundir com outros números (carga horária, anos de experiência).
+CONTEXTO_SALARIO = re.compile(r"sal[aá]ri|remunera|💰|budget|compensation|pretens", re.I)
+NUMERO = r"(\d{1,3}(?:[.\s]\d{3})+|\d+)(?:,(\d{1,2}))?\s*(k|mil)?\b"
+MOEDA = r"(?:r\$|us\$|usd|\$)\s*"
+VALOR = re.compile(rf"{MOEDA}{NUMERO}|{NUMERO.replace('(k|mil)?', '(k|mil)')}", re.I)
+SEGUNDO = re.compile(rf"\s*(?:a|-|–|até|to)\s*(?:{MOEDA})?{NUMERO}", re.I)
+
+
+def _numero(inteiro: str, decimal: str | None, mil: str | None) -> float:
+    valor = float(re.sub(r"[.\s]", "", inteiro) + (f".{decimal}" if decimal else ""))
+    return valor * 1000 if mil else valor
+
+
+def salario(textos: list[str]) -> dict | None:
+    """Faixa mensal informada na vaga: {"moeda", "min", "max"}, ou None se não houver."""
+    for texto in textos:
+        linhas = (texto or "").splitlines()
+        for i, linha in enumerate(linhas):
+            if not CONTEXTO_SALARIO.search(linha):
+                continue
+            trecho = " ".join(linhas[i:i + 2])[:200]  # o valor às vezes vem na linha de baixo
+            m = VALOR.search(trecho)
+            if not m:
+                continue
+            g = m.groups()
+            valores = [_numero(*g[:3]) if g[0] else _numero(*g[3:])]
+            if segundo := SEGUNDO.match(trecho, m.end()):
+                valores.append(_numero(*segundo.groups()))
+            valores = [v for v in valores if 500 <= v <= 100_000]  # descarta hora e valor anual
+            if valores:
+                moeda = "USD" if re.search(r"us\$|usd|d[oó]lar", trecho, re.I) else "BRL"
+                return {"moeda": moeda, "min": min(valores), "max": max(valores)}
+    return None

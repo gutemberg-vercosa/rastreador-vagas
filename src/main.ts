@@ -1,18 +1,18 @@
 import {
-  contar, entradaPorMes, filtrar, meses, NAO_INFORMADO, resumo,
+  contar, entradaPorMes, faixaSalario, filtrar, meses, NAO_INFORMADO, recentes, resumo,
   type Dimensao, type Filtros, type Vaga,
 } from './indicadores';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 const CORES: Record<string, string> = {
-  'Back-end': '#0071e3', 'Front-end': '#ff9500', React: '#5ac8fa', '.NET': '#5856d6', Java: '#ff3b30',
-  PHP: '#af52de', QA: '#34c759', Dados: '#ff2d55', Android: '#30b0c7', iOS: '#8e8e93',
+  'Back-end': '#3b82f6', 'Front-end': '#f59e0b', React: '#22d3ee', '.NET': '#8b5cf6', Java: '#ef4444',
+  PHP: '#64748b', QA: '#10b981', Dados: '#ec4899', Android: '#84cc16', iOS: '#a3a3a3',
 };
-const TONS = ['#0071e3', '#5ac8fa', '#34c759', '#ff9500', '#af52de'];
+const TONS = ['#3b82f6', '#22d3ee', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 const CINZA = '#c7c7cc';
 const NOMES: Record<Dimensao, string> = {
-  comunidade: 'Comunidade', mes: 'Mês', tecnologia: 'Tecnologia', nivel: 'Nível', modelo: 'Modelo', regime: 'Regime',
+  comunidade: 'Comunidade', mes: 'Mês', tecnologia: 'Tecnologia', nivel: 'Nível', modelo: 'Modelo', regime: 'Regime', salario: 'Salário',
 };
 const DIMENSOES = Object.keys(NOMES) as Dimensao[];
 const POR_PAGINA = 50;
@@ -22,12 +22,20 @@ let agora = new Date();
 let listaMeses: string[] = [];
 const filtros: Filtros = {};
 let pagina = 1;
+const dicas = new Map<string, string>();
 
 const escapar = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 const numero = (n: number) => n.toLocaleString('pt-BR');
 const nomeMes = (mes: string, ano = false) => new Date(`${mes}-15T12:00`)
   .toLocaleDateString('pt-BR', ano ? { month: 'long', year: 'numeric' } : { month: 'short' }).replace('.', '');
 const rotulo = (d: Dimensao, valor: string) => (d === 'mes' ? nomeMes(valor, true) : valor);
+const mil = (n: number) => (n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+
+function salario(v: Vaga) {
+  if (v.salario_min === null || v.salario_max === null) return '';
+  const faixa = v.salario_min === v.salario_max ? mil(v.salario_min) : `${mil(v.salario_min)}–${mil(v.salario_max)}`;
+  return `${v.moeda === 'USD' ? 'US$' : 'R$'} ${faixa} mil`;
+}
 
 /** Atributos de um item clicável: liga ou desliga o filtro e fica apagado quando outro valor está escolhido. */
 function alvo(d: Dimensao, valor: string, classe = '') {
@@ -56,7 +64,7 @@ function preencherCampos() {
   document.querySelectorAll<HTMLSelectElement>('[data-filtro]').forEach((s) => {
     const d = s.dataset.filtro as Dimensao;
     const opcoes = contar(vagas, d).map(([v]) => v).filter((v) => v !== NAO_INFORMADO);
-    if (d !== 'tecnologia') opcoes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (d !== 'tecnologia' && d !== 'salario') opcoes.sort((a, b) => a.localeCompare(b, 'pt-BR'));
     s.insertAdjacentHTML('beforeend', opcoes.map((v) => `<option>${escapar(v)}</option>`).join(''));
     s.addEventListener('change', () => mudar(() => {
       if (s.value) filtros[d] = s.value;
@@ -74,20 +82,23 @@ function quando(iso: string) {
 }
 
 function mostrarVagas() {
-  const soAbertas = ($('so-abertas') as HTMLInputElement).checked;
-  const lista = filtrar(vagas, filtros).filter((v) => !soAbertas || !v.fechada);
+  const dias = +($('periodo') as HTMLSelectElement).value;
+  const lista = filtrar(recentes(vagas, dias, agora), filtros).filter((v) => !v.fechada);
   const visiveis = lista.slice(0, pagina * POR_PAGINA);
   $('n-vagas').textContent = numero(lista.length);
   $('contagem').textContent = `${numero(lista.length)} vaga${lista.length === 1 ? '' : 's'}`;
-  $('vagas').innerHTML = visiveis.map((v) => `<li${v.fechada ? ' class="encerrada"' : ''}>
-    <a href="${escapar(v.url)}" target="_blank" rel="noopener">${escapar(v.titulo)}</a>
+  $('vagas').innerHTML = visiveis.map((v) => `<li>
+    <div class="vaga-topo">
+      <a href="${escapar(v.url)}" target="_blank" rel="noopener">${escapar(v.titulo)}</a>
+      ${v.moeda ? `<button ${alvo('salario', faixaSalario(v), 'salario')}>${salario(v)}</button>` : ''}
+    </div>
     <div class="chips">
       <button ${alvo('comunidade', v.comunidade, 'chip')} style="--cor:${CORES[v.comunidade]}">${v.comunidade}</button>
       ${(['nivel', 'modelo', 'regime'] as const).filter((d) => v[d]).map((d) => `<button ${alvo(d, v[d]!, 'chip')}>${v[d]}</button>`).join('')}
       ${v.tecnologias.map((t) => `<button ${alvo('tecnologia', t, 'tec')}>${t}</button>`).join('')}
-      <time datetime="${v.criada}">${v.fechada ? 'encerrada · ' : ''}${quando(v.criada)}</time>
+      <time datetime="${v.criada}">${quando(v.criada)}</time>
     </div>
-  </li>`).join('') || '<li class="vazio">Nenhuma vaga com esses filtros.</li>';
+  </li>`).join('') || `<li class="vazio">Nenhuma vaga com esses filtros${dias < 400 ? '. Tente um período maior' : ''}.</li>`;
   $('mais').hidden = visiveis.length >= lista.length;
 }
 
@@ -106,22 +117,33 @@ function mostrarResumo() {
   $('mediana').textContent = r.medianaDias === null ? '–' : `${Math.round(r.medianaDias)} dias`;
 }
 
-/** Colunas por mês, empilhadas por comunidade. A coluna filtra o mês; a legenda, a comunidade. */
+/** Escala "redonda" para as linhas de grade, com metade inteira (20, 100, 200...). */
+const teto = (n: number) => {
+  const passo = n <= 20 ? 10 : n <= 100 ? 50 : 100;
+  return Math.max(passo, Math.ceil(n / passo) * passo);
+};
+
+/**
+ * Colunas por mês, empilhadas por comunidade (a maior embaixo). A coluna filtra o mês,
+ * a legenda filtra a comunidade e o balão mostra a divisão do mês.
+ */
 function mostrarPorMes() {
   const base = filtrar(vagas, filtros, ['mes', 'comunidade']);
-  const comunidades = Object.keys(CORES).filter((c) => vagas.some((v) => v.comunidade === c));
-  const dados = listaMeses.map((mes) => base.filter((v) => v.criada.startsWith(mes)));
-  const maior = Math.max(...dados.map((d) => d.length), 1);
-  $('por-mes').innerHTML = dados.map((doMes, i) => {
+  const comunidades = contar(base, 'comunidade').map(([c]) => c);
+  const doMes = listaMeses.map((mes) => base.filter((v) => v.criada.startsWith(mes)));
+  const escala = teto(Math.max(...doMes.map((d) => d.length), 1));
+  $('por-mes').innerHTML = `<span class="eixo"><i>${escala}</i><i>${escala / 2}</i><i>0</i></span>` + doMes.map((lista, i) => {
     const mes = listaMeses[i];
-    const total = filtros.comunidade ? doMes.filter((v) => v.comunidade === filtros.comunidade).length : doMes.length;
-    const partes = comunidades.map((c) => {
-      const n = doMes.filter((v) => v.comunidade === c).length;
-      const apagado = filtros.comunidade && filtros.comunidade !== c ? ' class="apagado"' : '';
-      return n ? `<i${apagado} style="height:${(n / maior) * 100}%;background:${CORES[c]}"></i>` : '';
-    }).join('');
-    return `<button ${alvo('mes', mes, i === dados.length - 1 ? 'coluna parcial' : 'coluna')} title="${nomeMes(mes, true)}: ${total} vagas">
-      <b>${total}</b><span class="pilha">${partes}</span><span class="rotulo">${nomeMes(mes)}</span>
+    const partes = comunidades.map((c) => [c, lista.filter((v) => v.comunidade === c).length] as const).filter(([, n]) => n);
+    const total = filtros.comunidade ? partes.find(([c]) => c === filtros.comunidade)?.[1] ?? 0 : lista.length;
+    dicas.set(mes, `<b>${nomeMes(mes, true)}</b><span>${numero(lista.length)} vagas</span>`
+      + partes.map(([c, n]) => `<span><i style="background:${CORES[c]}"></i>${c}<b>${n}</b></span>`).join(''));
+    return `<button ${alvo('mes', mes, i === doMes.length - 1 ? 'coluna parcial' : 'coluna')} data-dica="${mes}" aria-label="${nomeMes(mes, true)}: ${total} vagas">
+      <span class="area"><span class="pilha" style="height:${(lista.length / escala) * 100}%">
+        ${lista.length ? `<b>${total}</b>` : ''}
+        ${partes.map(([c, n]) => `<i${filtros.comunidade && filtros.comunidade !== c ? ' class="apagado"' : ''} style="flex:${n};background:${CORES[c]}"></i>`).join('')}
+      </span></span>
+      <span class="rotulo">${nomeMes(mes)}</span>
     </button>`;
   }).join('');
   $('legenda').innerHTML = comunidades.map((c) =>
@@ -131,7 +153,7 @@ function mostrarPorMes() {
 function mostrarTecnologias() {
   const base = filtrar(vagas, filtros, ['tecnologia']);
   const contagem = contar(base, 'tecnologia');
-  const top = contagem.slice(0, 12);
+  const top = contagem.slice(0, 10);
   const escolhida = contagem.find(([t]) => t === filtros.tecnologia);
   if (escolhida && !top.includes(escolhida)) top.push(escolhida);
   const pct = (n: number) => Math.round((100 * n) / (base.length || 1));
@@ -144,17 +166,19 @@ function mostrarTecnologias() {
 
 function mostrarEntrada() {
   const dados = entradaPorMes(filtrar(vagas, filtros, ['mes', 'nivel']), listaMeses);
-  const maior = Math.max(...dados.map((d) => d.pct ?? 0), 1);
-  $('entrada').innerHTML = dados.map(({ mes, pct }) => `<button ${alvo('mes', mes, 'coluna')} title="${nomeMes(mes, true)}">
-    <b>${pct === null ? '–' : `${Math.round(pct)}%`}</b>
-    <span class="pilha"><i style="height:${((pct ?? 0) / maior) * 100}%"></i></span>
-    <span class="rotulo">${nomeMes(mes)}</span>
-  </button>`).join('');
+  const escala = teto(Math.max(...dados.map((d) => d.pct ?? 0), 1));
+  $('entrada').innerHTML = `<span class="eixo"><i>${escala}%</i><i>${escala / 2}%</i><i>0</i></span>` + dados.map(({ mes, pct }) =>
+    `<button ${alvo('mes', mes, 'coluna')} title="${nomeMes(mes, true)}: ${pct === null ? 'sem vagas com nível informado' : `${Math.round(pct)}%`}">
+      <span class="area"><span class="pilha" style="height:${((pct ?? 0) / escala) * 100}%">
+        ${pct ? `<b>${Math.round(pct)}%</b><i style="flex:1"></i>` : ''}
+      </span></span>
+      <span class="rotulo">${nomeMes(mes)}</span>
+    </button>`).join('');
 }
 
-/** Barras de 100% para nível, modelo e regime; cada parte e cada item da legenda filtram. */
+/** Barras de 100% para nível, modelo, regime e salário; cada parte e cada item da legenda filtram. */
 function mostrarPerfil() {
-  $('perfil').innerHTML = (['nivel', 'modelo', 'regime'] as const).map((d) => {
+  $('perfil').innerHTML = (['nivel', 'modelo', 'regime', 'salario'] as const).map((d) => {
     const itens = contar(filtrar(vagas, filtros, [d]), d);
     const total = itens.reduce((s, [, n]) => s + n, 0) || 1;
     const cor = (valor: string, i: number) => (valor === NAO_INFORMADO ? CINZA : TONS[i % TONS.length]);
@@ -167,6 +191,20 @@ function mostrarPerfil() {
     </div>`;
   }).join('');
 }
+
+// ---------- Balão do gráfico por mês ----------
+
+const balao = $('dica');
+document.addEventListener('pointerover', (e) => {
+  const coluna = (e.target as HTMLElement).closest<HTMLElement>('[data-dica]');
+  balao.hidden = !coluna;
+  if (!coluna) return;
+  balao.innerHTML = dicas.get(coluna.dataset.dica!) ?? '';
+  const r = coluna.getBoundingClientRect();
+  const esquerda = Math.min(Math.max(8, r.left + r.width / 2 - balao.offsetWidth / 2), innerWidth - balao.offsetWidth - 8);
+  balao.style.left = `${esquerda}px`;
+  balao.style.top = `${Math.max(8, r.top - balao.offsetHeight + 24)}px`;
+});
 
 // ---------- Abas e eventos ----------
 
@@ -202,7 +240,7 @@ document.addEventListener('click', (e) => {
     mudar(() => (tirar === 'tudo' ? DIMENSOES : [tirar as Dimensao]).forEach((d) => delete filtros[d]));
   }
 });
-$('so-abertas').addEventListener('change', () => mudar(() => {}));
+$('periodo').addEventListener('change', () => mudar(() => {}));
 $('mais').addEventListener('click', () => {
   pagina++;
   mostrarVagas();
@@ -215,11 +253,11 @@ async function iniciar() {
     vagas = dados.vagas;
     agora = new Date(dados.atualizado);
     listaMeses = meses(agora);
-    $('atualizado').textContent = `Atualizado em ${agora.toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}`;
+    $('atualizado').textContent = `Atualizado em ${agora.toLocaleString('pt-BR', { dateStyle: 'medium', timeStyle: 'short' })}`;
     preencherCampos();
     abrirAba();
   } catch {
-    $('atualizado').textContent = 'Não foi possível carregar os dados. Tente recarregar a página.';
+    $('atualizado').textContent = 'Não foi possível carregar os dados.';
   }
 }
 

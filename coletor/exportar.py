@@ -14,6 +14,7 @@ SAIDA = BANCO.parent / "dados.json"
 
 VAGAS = """
 SELECT v.titulo, v.url, v.comunidade, v.criada, v.fechada, v.nivel, v.modelo, v.regime,
+       v.moeda, v.salario_min, v.salario_max,
        GROUP_CONCAT(t.nome, '|') AS tecnologias
 FROM vagas v LEFT JOIN tecnologias t ON t.vaga_id = v.id
 GROUP BY v.id

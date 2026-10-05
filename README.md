@@ -1,6 +1,6 @@
 # Rastreador de Vagas
 
-Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, atualizadas sozinhas todos os dias. A aba **Vagas** traz a lista com busca e filtros. A aba **Painel** mostra quantas vagas surgem por mês, as tecnologias mais pedidas, o espaço para quem está começando e o perfil das vagas (nível, modelo e regime), com filtros cruzados como no Power BI: clicar num mês, tecnologia, nível ou comunidade filtra todos os indicadores e a lista.
+Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, atualizadas sozinhas todos os dias. A aba **Vagas** traz as vagas abertas dos últimos 30 dias (o período pode ser estendido até 12 meses), com busca e filtros, inclusive por faixa salarial. A aba **Painel** mostra quantas vagas surgem por mês, as tecnologias mais pedidas, o espaço para quem está começando e o perfil das vagas (nível, modelo, regime e salário), com filtros cruzados como no Power BI: clicar num mês, tecnologia, nível ou comunidade filtra todos os indicadores e a lista.
 
 **Acesse:** https://gutemberg-vercosa.github.io/rastreador-vagas/
 
@@ -17,7 +17,7 @@ GitHub Actions (todo dia, 7h)
 
 - **Fonte:** as comunidades (backend-br, frontendbr, react-brasil, dotnetdevbr, soujava, phpdevbr, qa-brasil, datascience-br, androiddevbr e cocoaheadsbrasil) publicam vagas como issues, com etiquetas de nível, regime, modelo e tecnologia. A leitura é pela API oficial, sem raspar páginas.
 - **Coleta:** o mês atual e os 12 anteriores, inteiros. Como a API guarda todo o histórico, o banco é recriado a cada execução e não precisa ser versionado. O repositório não cresce com os dados.
-- **Classificação:** nível, modelo, regime e tecnologias vêm das etiquetas e, quando faltam, do título. Avisos e issues de manutenção são descartados.
+- **Classificação:** nível, modelo, regime e tecnologias vêm das etiquetas e, quando faltam, do título. O salário é lido do texto da vaga, só nos trechos que falam de salário ("Faixa salarial", "Remuneração", etiqueta 💰), para não confundir com outros números; vagas em dólar ficam numa faixa à parte. Avisos e issues de manutenção são descartados.
 - **Banco:** duas tabelas (`vagas` e `tecnologias`, uma linha por tecnologia citada), juntadas na exportação. O arquivo `vagas.db` fica disponível para download no próprio site.
 - **Filtros cruzados:** os indicadores são calculados no navegador a partir das vagas. Cada gráfico aplica todos os filtros menos os próprios, como no Power BI: o item escolhido fica destacado e os outros, apagados, para comparação.
 - **Interface:** TypeScript sem frameworks. Os gráficos são HTML e CSS, sem biblioteca.

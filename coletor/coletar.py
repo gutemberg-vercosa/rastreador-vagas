@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from classificar import classificar, eh_vaga  # noqa: E402
+from classificar import classificar, eh_vaga, salario  # noqa: E402
 
 COMUNIDADES = {
     "backend-br/vagas": "Back-end",
@@ -41,7 +41,10 @@ CREATE TABLE vagas (
   fechada TEXT,              -- quando a vaga foi encerrada (issue fechada)
   nivel TEXT,
   modelo TEXT,
-  regime TEXT
+  regime TEXT,
+  moeda TEXT,                -- BRL ou USD, quando a vaga informa o salário
+  salario_min REAL,          -- mensal
+  salario_max REAL
 );
 CREATE TABLE tecnologias (
   vaga_id INTEGER NOT NULL REFERENCES vagas(id),
@@ -97,9 +100,11 @@ def coletar(banco: Path = BANCO, agora: datetime | None = None):
             if not eh_vaga(issue["title"], etiquetas):
                 continue
             c = classificar(issue["title"], etiquetas)
-            con.execute("INSERT INTO vagas VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (
+            s = salario([*etiquetas, issue["title"], issue["body"] or ""]) or {}
+            con.execute("INSERT INTO vagas VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (
                 issue["id"], comunidade, issue["title"].strip(), issue["html_url"],
-                issue["created_at"], issue["closed_at"], c["nivel"], c["modelo"], c["regime"]))
+                issue["created_at"], issue["closed_at"], c["nivel"], c["modelo"], c["regime"],
+                s.get("moeda"), s.get("min"), s.get("max")))
             con.executemany("INSERT INTO tecnologias VALUES (?, ?)", [(issue["id"], t) for t in c["tecnologias"]])
             total += 1
         print(f"{repo}: {total} vagas")

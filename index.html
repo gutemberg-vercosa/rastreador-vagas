@@ -4,23 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rastreador de Vagas</title>
-  <meta name="description" content="Vagas de tecnologia publicadas pelas comunidades brasileiras no GitHub, atualizadas todo dia, com painel interativo de volume, tecnologias, nível e modelo de trabalho.">
+  <meta name="description" content="Vagas de tecnologia publicadas pelas comunidades brasileiras no GitHub, atualizadas todo dia, com painel interativo de volume, tecnologias, nível, modelo de trabalho e salário.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230071e3'/><path d='M8 24V15m6 9V9m6 15v-6m6 6V12' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
   <main>
     <header class="topo">
-      <div>
-        <h1>Rastreador de Vagas</h1>
-        <p class="sub">Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, coletadas todos os dias.</p>
-        <p id="atualizado" class="atualizado"></p>
-      </div>
-      <nav class="abas" aria-label="Visão">
-        <a href="#vagas" data-aba="vagas" aria-current="page">Vagas <span id="n-vagas"></span></a>
-        <a href="#painel" data-aba="painel">Painel</a>
-      </nav>
+      <h1>Rastreador de Vagas</h1>
+      <p id="atualizado" class="atualizado"></p>
+      <p class="sub">Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, coletadas todos os dias.</p>
     </header>
+
+    <nav class="abas" aria-label="Visão">
+      <a href="#vagas" data-aba="vagas" aria-current="page">Vagas <span id="n-vagas"></span></a>
+      <a href="#painel" data-aba="painel">Painel</a>
+    </nav>
 
     <div class="busca">
       <input id="busca" type="search" placeholder="Buscar por cargo, empresa ou tecnologia" aria-label="Buscar vagas" autocomplete="off">
@@ -28,12 +27,20 @@
       <select data-filtro="tecnologia" aria-label="Tecnologia"><option value="">Tecnologia</option></select>
       <select data-filtro="nivel" aria-label="Nível"><option value="">Nível</option></select>
       <select data-filtro="modelo" aria-label="Modelo de trabalho"><option value="">Modelo</option></select>
+      <select data-filtro="salario" aria-label="Salário"><option value="">Salário</option></select>
     </div>
     <div id="ativos" class="ativos" hidden></div>
 
     <section id="aba-vagas" class="painel">
       <div class="lista-topo">
-        <label class="interruptor"><input id="so-abertas" type="checkbox" checked> Só vagas abertas</label>
+        <label class="periodo">Vagas abertas publicadas nos últimos
+          <select id="periodo">
+            <option value="30">30 dias</option>
+            <option value="90">90 dias</option>
+            <option value="180">6 meses</option>
+            <option value="400">12 meses</option>
+          </select>
+        </label>
         <span id="contagem" class="nota"></span>
       </div>
       <ul id="vagas" class="vagas"></ul>
@@ -41,7 +48,7 @@
     </section>
 
     <div id="aba-painel" class="painel-grade" hidden>
-      <p class="dica">Clique num mês, tecnologia, nível ou comunidade para filtrar todos os indicadores e a lista de vagas.</p>
+      <p class="dica">Clique num mês, tecnologia, nível, faixa salarial ou comunidade para filtrar todos os indicadores e a lista de vagas.</p>
       <section class="numeros" aria-label="Resumo">
         <div class="painel"><span>Vagas abertas</span><b id="abertas">–</b><small>publicadas no último ano</small></div>
         <div class="painel"><span>Novas em 30 dias</span><b id="novas">–</b><small id="variacao"></small></div>
@@ -49,38 +56,42 @@
         <div class="painel"><span>Tempo aberta</span><b id="mediana">–</b><small>mediana até encerrar</small></div>
       </section>
 
-      <section class="painel">
+      <div class="col-esq">
+      <section class="painel g-mes">
         <h2>Novas vagas por mês</h2>
-        <p class="nota">O último mês está em andamento.</p>
+        <p class="nota">Por comunidade. O último mês está em andamento.</p>
         <div id="por-mes" class="colunas"></div>
         <div id="legenda" class="legenda"></div>
       </section>
 
-      <div class="grade">
-        <section class="painel">
-          <h2>Tecnologias mais pedidas</h2>
-          <p class="nota">Porcentagem das vagas que citam cada uma.</p>
-          <div id="tecnologias" class="barras"></div>
-        </section>
-        <section class="painel">
-          <h2>Vagas para quem está começando</h2>
-          <p class="nota">Estágio e júnior, entre as vagas que informam o nível.</p>
-          <div id="entrada" class="colunas simples"></div>
-        </section>
-      </div>
-
-      <section class="painel">
+      <section class="painel g-perfil">
         <h2>Perfil das vagas</h2>
         <div id="perfil" class="perfil"></div>
       </section>
+      </div>
+
+      <div class="col-dir">
+      <section class="painel g-tec">
+        <h2>Tecnologias mais pedidas</h2>
+        <p class="nota">Porcentagem das vagas que citam cada uma.</p>
+        <div id="tecnologias" class="barras"></div>
+      </section>
+
+      <section class="painel g-ent">
+        <h2>Vagas para quem está começando</h2>
+        <p class="nota">Estágio e júnior, entre as vagas que informam o nível.</p>
+        <div id="entrada" class="colunas simples"></div>
+      </section>
+      </div>
     </div>
 
     <footer>
       Fonte: issues nos repositórios de vagas das comunidades (backend-br, frontendbr, react-brasil, dotnetdevbr, soujava, phpdevbr, qa-brasil, datascience-br, androiddevbr e cocoaheadsbrasil), lidas pela API do GitHub.
-      Nível, modelo e tecnologias vêm das etiquetas de cada vaga e, na falta delas, do título.
+      Nível, modelo e tecnologias vêm das etiquetas de cada vaga e, na falta delas, do título. O salário vem do texto da vaga, quando informado.
       <a href="vagas.db" download>Baixar o banco SQLite</a>.
     </footer>
   </main>
+  <div id="dica" class="balao" role="tooltip" hidden></div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>

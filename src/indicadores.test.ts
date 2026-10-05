@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { contar, entradaPorMes, filtrar, mediana, meses, resumo, type Vaga } from './indicadores';
+import { contar, entradaPorMes, faixaSalario, filtrar, mediana, meses, recentes, resumo, type Vaga } from './indicadores';
 
 const vaga = (p: Partial<Vaga>): Vaga => ({
   titulo: 'Vaga', url: '', comunidade: 'Back-end', criada: '2026-10-01T10:00:00Z', fechada: null,
-  nivel: null, modelo: null, regime: null, tecnologias: [], ...p,
+  nivel: null, modelo: null, regime: null, moeda: null, salario_min: null, salario_max: null, tecnologias: [], ...p,
 });
 
 const vagas = [
@@ -56,4 +56,25 @@ it('calcula a fatia de vagas de entrada por mês', () => {
   expect(entradaPorMes(vagas, ['2026-09', '2026-10', '2026-11'])).toEqual([
     { mes: '2026-09', pct: 0 }, { mes: '2026-10', pct: 100 }, { mes: '2026-11', pct: null },
   ]);
+});
+
+describe('salário', () => {
+  it('agrupa pelo meio da faixa e separa o dólar', () => {
+    expect(faixaSalario(vaga({ moeda: 'BRL', salario_min: 12000, salario_max: 22000 }))).toBe('R$ 15 a 20 mil');
+    expect(faixaSalario(vaga({ moeda: 'BRL', salario_min: 4500, salario_max: 4500 }))).toBe('Até R$ 5 mil');
+    expect(faixaSalario(vaga({ moeda: 'BRL', salario_min: 25000, salario_max: 30000 }))).toBe('Acima de R$ 20 mil');
+    expect(faixaSalario(vaga({ moeda: 'USD', salario_min: 5000, salario_max: 5000 }))).toBe('Em dólar');
+    expect(faixaSalario(vaga({}))).toBe('Não informado');
+  });
+
+  it('filtra e conta na ordem das faixas', () => {
+    const lista = [vaga({ moeda: 'BRL', salario_min: 12000, salario_max: 14000 }), vaga({ moeda: 'BRL', salario_min: 3000, salario_max: 4000 }), vaga({})];
+    expect(contar(lista, 'salario').map(([f]) => f)).toEqual(['Até R$ 5 mil', 'R$ 10 a 15 mil', 'Não informado']);
+    expect(filtrar(lista, { salario: 'Até R$ 5 mil' })).toHaveLength(1);
+  });
+});
+
+it('pega só as vagas publicadas no período', () => {
+  expect(recentes(vagas, 30, new Date('2026-10-04T12:00:00Z'))).toHaveLength(2);
+  expect(recentes(vagas, 90, new Date('2026-10-04T12:00:00Z'))).toHaveLength(3);
 });
