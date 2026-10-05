@@ -1,7 +1,6 @@
 import sqlite3
 import tempfile
 import unittest
-from datetime import datetime, timezone
 from pathlib import Path
 
 from classificar import classificar, eh_vaga
@@ -32,29 +31,25 @@ class Classificar(unittest.TestCase):
 
 
 class Exportar(unittest.TestCase):
-    def test_consultas(self):
+    def test_junta_as_tecnologias_de_cada_vaga(self):
         with tempfile.TemporaryDirectory() as pasta:
             banco = Path(pasta) / "v.db"
             con = sqlite3.connect(banco)
             con.executescript(ESQUEMA)
             con.executemany("INSERT INTO vagas VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", [
                 (1, "Back-end", "A", "u1", "2026-10-01T10:00:00Z", None, "Júnior", "Remoto", "CLT"),
-                (2, "Back-end", "B", "u2", "2026-09-20T10:00:00Z", "2026-09-30T10:00:00Z", "Sênior", "Remoto", "PJ"),
-                (3, "Front-end", "C", "u3", "2026-08-20T10:00:00Z", "2026-08-24T10:00:00Z", None, "Presencial", None),
-                (4, "Front-end", "D", "u4", "2025-12-01T10:00:00Z", None, "Pleno", None, "CLT"),
+                (2, "Front-end", "B", "u2", "2026-09-20T10:00:00Z", "2026-09-30T10:00:00Z", None, None, None),
             ])
-            con.executemany("INSERT INTO tecnologias VALUES (?, ?)", [(1, "Python"), (2, "Python"), (2, "SQL")])
+            con.executemany("INSERT INTO tecnologias VALUES (?, ?)", [(1, "SQL"), (1, "Python")])
             con.commit()
             con.close()
-            d = exportar(banco, datetime(2026, 10, 4, 12, tzinfo=timezone.utc))
+            vagas = exportar(banco)
 
-        self.assertEqual(d["resumo"], {"abertas": 2, "novas30": 2, "anteriores30": 1, "remoto": 67, "mediana_dias": 7})
-        self.assertEqual(d["tecnologias"][0], {"nome": "Python", "total": 2, "pct": 67})
-        self.assertEqual(d["niveis"][-1], {"valor": "Não informado", "total": 1})
-        self.assertEqual([v["titulo"] for v in d["vagas"]], ["A"])
-        self.assertEqual(d["vagas"][0]["tecnologias"], "Python")
-        self.assertEqual(d["entrada_por_mes"], [
-            {"mes": "2025-12", "pct": 0.0}, {"mes": "2026-09", "pct": 0.0}, {"mes": "2026-10", "pct": 100.0}])
+        self.assertEqual([v["titulo"] for v in vagas], ["A", "B"])  # mais nova primeiro
+        self.assertEqual(vagas[0]["tecnologias"], ["Python", "SQL"])
+        self.assertEqual(vagas[1], {"titulo": "B", "url": "u2", "comunidade": "Front-end", "criada": "2026-09-20T10:00:00Z",
+                                    "fechada": "2026-09-30T10:00:00Z", "nivel": None, "modelo": None, "regime": None,
+                                    "tecnologias": []})
 
 
 if __name__ == "__main__":

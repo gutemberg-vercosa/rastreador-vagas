@@ -4,68 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rastreador de Vagas</title>
-  <meta name="description" content="Painel diário das vagas de tecnologia publicadas pelas comunidades brasileiras no GitHub: volume, tecnologias, nível, modelo de trabalho e vagas abertas.">
+  <meta name="description" content="Vagas de tecnologia publicadas pelas comunidades brasileiras no GitHub, atualizadas todo dia, com painel interativo de volume, tecnologias, nível e modelo de trabalho.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230071e3'/><path d='M8 24V15m6 9V9m6 15v-6m6 6V12' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>">
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
   <main>
     <header class="topo">
-      <h1>Rastreador de Vagas</h1>
-      <p class="sub">Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, coletadas todos os dias.</p>
-      <p id="atualizado" class="atualizado"></p>
+      <div>
+        <h1>Rastreador de Vagas</h1>
+        <p class="sub">Vagas de tecnologia publicadas por 10 comunidades brasileiras no GitHub, coletadas todos os dias.</p>
+        <p id="atualizado" class="atualizado"></p>
+      </div>
+      <nav class="abas" aria-label="Visão">
+        <a href="#vagas" data-aba="vagas" aria-current="page">Vagas <span id="n-vagas"></span></a>
+        <a href="#painel" data-aba="painel">Painel</a>
+      </nav>
     </header>
 
-    <section class="numeros" aria-label="Resumo">
-      <div class="painel"><span>Vagas abertas</span><b id="abertas">–</b><small>publicadas no último ano</small></div>
-      <div class="painel"><span>Novas em 30 dias</span><b id="novas">–</b><small id="variacao"></small></div>
-      <div class="painel"><span>Remotas</span><b id="remoto">–</b><small>das vagas em 90 dias</small></div>
-      <div class="painel"><span>Tempo aberta</span><b id="mediana">–</b><small>mediana até encerrar</small></div>
+    <div class="busca">
+      <input id="busca" type="search" placeholder="Buscar por cargo, empresa ou tecnologia" aria-label="Buscar vagas" autocomplete="off">
+      <select data-filtro="comunidade" aria-label="Comunidade"><option value="">Comunidade</option></select>
+      <select data-filtro="tecnologia" aria-label="Tecnologia"><option value="">Tecnologia</option></select>
+      <select data-filtro="nivel" aria-label="Nível"><option value="">Nível</option></select>
+      <select data-filtro="modelo" aria-label="Modelo de trabalho"><option value="">Modelo</option></select>
+    </div>
+    <div id="ativos" class="ativos" hidden></div>
+
+    <section id="aba-vagas" class="painel">
+      <div class="lista-topo">
+        <label class="interruptor"><input id="so-abertas" type="checkbox" checked> Só vagas abertas</label>
+        <span id="contagem" class="nota"></span>
+      </div>
+      <ul id="vagas" class="vagas"></ul>
+      <button type="button" id="mais" class="mais" hidden>Mostrar mais</button>
     </section>
 
-    <section class="painel">
-      <h2>Novas vagas por mês</h2>
-      <p class="nota">O último mês está em andamento.</p>
-      <div id="por-mes" class="colunas"></div>
-      <ul id="legenda" class="legenda"></ul>
-    </section>
-
-    <div class="grade">
-      <section class="painel">
-        <h2>Tecnologias mais pedidas</h2>
-        <p class="nota">Porcentagem das vagas dos últimos 90 dias que citam cada uma.</p>
-        <ul id="tecnologias" class="barras"></ul>
+    <div id="aba-painel" class="painel-grade" hidden>
+      <p class="dica">Clique num mês, tecnologia, nível ou comunidade para filtrar todos os indicadores e a lista de vagas.</p>
+      <section class="numeros" aria-label="Resumo">
+        <div class="painel"><span>Vagas abertas</span><b id="abertas">–</b><small>publicadas no último ano</small></div>
+        <div class="painel"><span>Novas em 30 dias</span><b id="novas">–</b><small id="variacao"></small></div>
+        <div class="painel"><span>Remotas</span><b id="remoto">–</b><small>entre as que informam o modelo</small></div>
+        <div class="painel"><span>Tempo aberta</span><b id="mediana">–</b><small>mediana até encerrar</small></div>
       </section>
 
       <section class="painel">
-        <h2>Vagas para quem está começando</h2>
-        <p class="nota">Estágio e júnior, entre as vagas que informam o nível.</p>
-        <div id="entrada" class="colunas simples"></div>
+        <h2>Novas vagas por mês</h2>
+        <p class="nota">O último mês está em andamento.</p>
+        <div id="por-mes" class="colunas"></div>
+        <div id="legenda" class="legenda"></div>
+      </section>
+
+      <div class="grade">
+        <section class="painel">
+          <h2>Tecnologias mais pedidas</h2>
+          <p class="nota">Porcentagem das vagas que citam cada uma.</p>
+          <div id="tecnologias" class="barras"></div>
+        </section>
+        <section class="painel">
+          <h2>Vagas para quem está começando</h2>
+          <p class="nota">Estágio e júnior, entre as vagas que informam o nível.</p>
+          <div id="entrada" class="colunas simples"></div>
+        </section>
+      </div>
+
+      <section class="painel">
+        <h2>Perfil das vagas</h2>
+        <div id="perfil" class="perfil"></div>
       </section>
     </div>
 
-    <section class="painel">
-      <h2>Perfil das vagas</h2>
-      <p class="nota">Últimos 90 dias.</p>
-      <div id="perfil" class="perfil"></div>
-    </section>
-
-    <section class="painel">
-      <div class="lista-topo">
-        <h2>Vagas abertas recentes</h2>
-        <span id="contagem" class="nota"></span>
-      </div>
-      <div class="filtros">
-        <input id="busca" type="search" placeholder="Buscar por cargo, empresa ou tecnologia" aria-label="Buscar vagas" autocomplete="off">
-        <select id="f-comunidade" aria-label="Comunidade"><option value="">Todas as comunidades</option></select>
-        <select id="f-nivel" aria-label="Nível"><option value="">Todos os níveis</option></select>
-        <select id="f-modelo" aria-label="Modelo de trabalho"><option value="">Qualquer modelo</option></select>
-      </div>
-      <ul id="vagas" class="vagas"></ul>
-    </section>
-
     <footer>
-      Fonte: issues abertas nos repositórios de vagas das comunidades (backend-br, frontendbr, react-brasil, dotnetdevbr, soujava, phpdevbr, qa-brasil, datascience-br, androiddevbr e cocoaheadsbrasil), lidas pela API do GitHub.
+      Fonte: issues nos repositórios de vagas das comunidades (backend-br, frontendbr, react-brasil, dotnetdevbr, soujava, phpdevbr, qa-brasil, datascience-br, androiddevbr e cocoaheadsbrasil), lidas pela API do GitHub.
       Nível, modelo e tecnologias vêm das etiquetas de cada vaga e, na falta delas, do título.
       <a href="vagas.db" download>Baixar o banco SQLite</a>.
     </footer>
