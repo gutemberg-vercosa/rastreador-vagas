@@ -47,13 +47,14 @@ a { color: var(--azul); }
 main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 16px; }
 main > * { min-width: 0; }
 
-.topo { display: grid; grid-template-columns: 1fr auto; align-items: start; column-gap: 16px; }
+.topo { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "titulo data" "sub sub" "abas abas"; align-items: start; column-gap: 16px; row-gap: 2px; }
+.topo h1 { grid-area: titulo; }
 h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); letter-spacing: -.025em; }
-.sub { grid-column: 1 / -1; color: var(--suave); margin-top: 2px; }
-.atualizado { color: var(--suave); font-size: .82rem; text-align: right; padding-top: 6px; }
+.sub { grid-area: sub; color: var(--suave); }
+.atualizado { grid-area: data; color: var(--suave); font-size: .82rem; text-align: right; padding-top: 6px; }
 
 /* Abas */
-.abas { justify-self: start; display: flex; background: var(--campo); border-radius: 10px; padding: 3px; }
+.abas { grid-area: abas; justify-self: start; margin-top: 12px; display: flex; background: var(--campo); border-radius: 10px; padding: 3px; }
 .abas a { padding: 6px 18px; border-radius: 8px; color: var(--texto); text-decoration: none; font-weight: 500; font-size: .95rem; }
 .abas a span { color: var(--suave); font-size: .85em; font-variant-numeric: tabular-nums; }
 .abas [aria-current] { background: var(--superficie); box-shadow: 0 1px 3px rgb(0 0 0 / .12); }
@@ -172,6 +173,9 @@ footer { color: var(--suave); font-size: .8rem; }
   .busca { grid-template-columns: 2fr repeat(5, 1fr); }
   .busca input { grid-column: auto; }
   .numeros { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .topo { grid-template-areas: "titulo data" "sub abas"; }
+  .atualizado { align-self: start; }
+  .abas { justify-self: end; margin-top: -6px; }
 }
 
 /* Painel em duas colunas que terminam juntas: os gráficos de colunas esticam para ocupar a altura. */
